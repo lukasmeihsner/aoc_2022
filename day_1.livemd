@@ -11,19 +11,19 @@ input = Kino.Input.textarea("Put your data here")
 ```
 
 ```elixir
-{list, _} =
+{max, _} =
   input
   |> Kino.Input.read()
   |> String.split("\n")
-  |> Enum.reduce({[], 0}, fn
-    cal, {list, current_count} ->
+  |> Enum.reduce({0, 0}, fn
+    cal, {max, current_count} ->
       case cal do
-        "" -> {[current_count | list], 0}
-        _ -> {list, current_count + String.to_integer(cal)}
+        "" -> if current_count > max, do: {current_count, 0}, else: {max, 0}
+        _ -> {max, current_count + String.to_integer(cal)}
       end
   end)
 
-Enum.max(list)
+max
 ```
 
 ## Part 2
