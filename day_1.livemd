@@ -1,0 +1,48 @@
+# Day 1
+
+```elixir
+Mix.install([:kino])
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Put your data here")
+```
+
+```elixir
+{list, _} =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> Enum.reduce({[], 0}, fn
+    cal, {list, current_count} ->
+      case cal do
+        "" -> {[current_count | list], 0}
+        _ -> {list, current_count + String.to_integer(cal)}
+      end
+  end)
+
+Enum.max(list)
+```
+
+## Part 2
+
+```elixir
+{list, _} =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> Enum.reduce({[], 0}, fn
+    cal, {list, current_count} ->
+      case cal do
+        "" -> {[current_count | list], 0}
+        _ -> {list, current_count + String.to_integer(cal)}
+      end
+  end)
+
+list
+|> Enum.sort(&(&1 >= &2))
+|> Enum.take(3)
+|> Enum.sum()
+```
