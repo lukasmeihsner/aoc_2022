@@ -1,0 +1,122 @@
+# Day 2
+
+```elixir
+Mix.install([:kino])
+```
+
+## Input
+
+```elixir
+N
+```
+
+```elixir
+N
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input = Kino.Input.textarea("Input your data here:")
+```
+
+```elixir
+input = Kino.Input.read(input)
+```
+
+## Part 1
+
+```elixir
+defmodule Game do
+  def score(game) do
+    [opponent, player] = String.split(game, " ")
+    opponent = translate(opponent)
+    player = translate(player)
+    match_points = match(player, opponent)
+    match_points + shape_points(player)
+  end
+
+  defp translate("A"), do: :rock
+  defp translate("B"), do: :paper
+  defp translate("C"), do: :scissors
+  defp translate("X"), do: :rock
+  defp translate("Y"), do: :paper
+  defp translate("Z"), do: :scissors
+
+  defp match(a, b) when a == b, do: 3
+  defp match(:rock, :scissors), do: 6
+  defp match(:paper, :rock), do: 6
+  defp match(:scissors, :paper), do: 6
+  defp match(_, _), do: 0
+
+  defp shape_points(:rock), do: 1
+  defp shape_points(:paper), do: 2
+  defp shape_points(:scissors), do: 3
+end
+```
+
+```elixir
+import Game
+
+input
+|> String.split("\n", trim: true)
+|> Enum.reduce(0, fn match_up, total ->
+  total + score(match_up)
+end)
+```
+
+## Part 2
+
+```elixir
+defmodule Game do
+  def score(game) do
+    [opponent, player] = String.split(game, " ")
+    opponent = translate(opponent)
+
+    player =
+      player
+      |> translate
+      |> pick_for(opponent)
+
+    match_points = match(player, opponent)
+
+    match_points + shape_points(player)
+  end
+
+  defp translate("A"), do: :rock
+  defp translate("B"), do: :paper
+  defp translate("C"), do: :scissors
+
+  defp translate("X"), do: :lose
+  defp translate("Y"), do: :draw
+  defp translate("Z"), do: :win
+
+  defp pick_for(:lose, :rock), do: :scissors
+  defp pick_for(:win, :rock), do: :paper
+  defp pick_for(:lose, :paper), do: :rock
+  defp pick_for(:win, :paper), do: :scissors
+  defp pick_for(:lose, :scissors), do: :paper
+  defp pick_for(:win, :scissors), do: :rock
+  defp pick_for(:draw, choice), do: choice
+
+  defp match(a, b) when a == b, do: 3
+  defp match(:rock, :scissors), do: 6
+  defp match(:paper, :rock), do: 6
+  defp match(:scissors, :paper), do: 6
+  defp match(_, _), do: 0
+
+  defp shape_points(:rock), do: 1
+  defp shape_points(:paper), do: 2
+  defp shape_points(:scissors), do: 3
+end
+```
+
+```elixir
+import Game
+
+input
+|> String.split("\n", trim: true)
+|> Enum.reduce(0, fn match_up, total ->
+  total + score(match_up)
+end)
+```
