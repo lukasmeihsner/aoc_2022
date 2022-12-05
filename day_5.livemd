@@ -1,0 +1,115 @@
+# Day 5
+
+```elixir
+Mix.install([:kino])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please provide the data here")
+```
+
+```elixir
+[stack, moves] =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n\n")
+
+number_of_stacks =
+  stack
+  |> String.split("\n", trim: true)
+  |> Enum.at(-1)
+  |> String.split(" ", trim: true)
+  |> Enum.at(-1)
+  |> String.to_integer()
+
+stack =
+  stack
+  |> String.replace("    ", " ")
+  |> String.split("\n", trim: true)
+  |> Enum.drop(-1)
+  |> Enum.map(&String.split(&1, " "))
+  |> Enum.zip()
+  |> Enum.map(fn tuple ->
+    tuple
+    |> Tuple.to_list()
+    |> Enum.reduce([], fn
+      "[" <> <<letter>> <> "]", acc -> acc ++ [letter]
+      _, acc -> acc
+    end)
+  end)
+
+stack =
+  1..number_of_stacks
+  |> Enum.zip(stack)
+  |> Enum.into(%{})
+
+moves =
+  ~r/move (\d+) from (\d+) to (\d+)/
+  |> Regex.replace(moves, "\\1 \\2 \\3")
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn string ->
+    string
+    |> String.split(" ")
+    |> Enum.map(&String.to_integer/1)
+  end)
+```
+
+## Part 1
+
+```elixir
+defmodule Day5.Part1 do
+  def move(stack, [1, from, to]) do
+    %{^from => [item | rest], ^to => to_stack} = stack
+
+    stack
+    |> Map.put(from, rest)
+    |> Map.put(to, [item | to_stack])
+  end
+
+  def move(stack, [quantity, from, to]) do
+    stack
+    |> move([1, from, to])
+    |> move([quantity - 1, from, to])
+  end
+end
+```
+
+```elixir
+moves
+|> Enum.reduce(stack, &Day5.move(&2, &1))
+|> Enum.reduce([], fn {_key, [hd | _rest]}, acc -> acc ++ [hd] end)
+```
+
+## Part 2
+
+```elixir
+defmodule Day5.Part2 do
+  def move(stack, [1, from, to]) do
+    %{^from => [item | rest], ^to => to_stack} = stack
+
+    stack
+    |> Map.put(from, rest)
+    |> Map.put(to, [item | to_stack])
+  end
+
+  def move(stack, [quantity, from, to]) do
+    %{^from => from_stack, ^to => to_stack} = stack
+    {item, rest} = List.pop_at(from_stack, quantity - 1)
+
+    stack =
+      stack
+      |> Map.put(from, rest)
+      |> Map.put(to, [item | to_stack])
+
+    move(stack, [quantity - 1, from, to])
+  end
+end
+```
+
+```elixir
+moves
+|> Enum.reduce(stack, &Day5.Part2.move(&2, &1))
+|> Enum.reduce([], fn {_key, [hd | _rest]}, acc -> acc ++ [hd] end)
+```
