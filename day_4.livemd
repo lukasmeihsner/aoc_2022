@@ -1,0 +1,51 @@
+# Day 4
+
+```elixir
+Mix.install([:kino])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please put your data here")
+```
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn pair ->
+    pair
+    |> String.split([",", "-"])
+    |> Enum.map(&String.to_integer/1)
+  end)
+```
+
+## Part 1
+
+```elixir
+defmodule Day1 do
+  def pair_fully_intersects([s1_start, s1_end, s2_start, s2_end]) do
+    sec1_contains_sec2 = s1_start <= s2_start && s1_end >= s2_end
+    sec2_contains_sec1 = s2_start <= s1_start && s2_end >= s1_end
+    sec1_contains_sec2 || sec2_contains_sec1
+  end
+
+  def pair_partially_intersects([s1_start, s1_end, s2_start, s2_end]) do
+    !(s2_start > s1_end || s1_start > s2_end)
+  end
+end
+```
+
+```elixir
+input
+|> Enum.count(&Day1.pair_fully_intersects/1)
+```
+
+## Part 2
+
+```elixir
+input
+|> Enum.count(&Day1.pair_partially_intersects/1)
+```

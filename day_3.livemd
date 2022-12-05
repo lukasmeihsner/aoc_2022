@@ -6,8 +6,6 @@ Mix.install([:kino])
 
 ## Input
 
-
-
 ```elixir
 input = Kino.Input.textarea("Please put your data here")
 ```
