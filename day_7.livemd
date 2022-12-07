@@ -1,0 +1,90 @@
+# Day 7
+
+```elixir
+Mix.install([:kino])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please enter your data here")
+```
+
+```elixir
+defmodule Parser do
+  def read("$ cd ..", {path, dirs}) do
+    {Enum.drop(path, -1), dirs}
+  end
+
+  def read("$ cd " <> dir, {path, dirs}) do
+    path = path ++ [dir]
+    {path, Map.put(dirs, path, [])}
+  end
+
+  def read("dir " <> dir, {path, dirs}) do
+    dir = path ++ [dir]
+    dirs = Map.update!(dirs, path, fn list -> [dir | list] end)
+    {path, dirs}
+  end
+
+  def read(line, {path, dirs}) do
+    if Regex.match?(~r/\d+ /, line) do
+      [value, _] = String.split(line, " ")
+      dirs = Map.update!(dirs, path, fn list -> [String.to_integer(value) | list] end)
+      {path, dirs}
+    else
+      {path, dirs}
+    end
+  end
+
+  def sum(dirs) do
+    sum(dirs[["/"]], ["/"], dirs, %{})
+  end
+
+  def sum([hd | tl], path, dirs, dir_sizes) when is_integer(hd) do
+    dir_sizes = Map.update(dir_sizes, path, hd, &(&1 + hd))
+    sum(tl, path, dirs, dir_sizes)
+  end
+
+  def sum([hd | tl], path, dirs, dir_sizes) do
+    dir_sizes = sum(dirs[hd], hd, dirs, dir_sizes)
+    value = dir_sizes[hd]
+    dir_sizes = Map.update(dir_sizes, path, value, &(&1 + value))
+    sum(tl, path, dirs, dir_sizes)
+  end
+
+  def sum([], _path, _dirs, dir_sizes), do: dir_sizes
+end
+```
+
+```elixir
+import Parser
+
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.reduce({[], %{}}, &read(&1, &2))
+  |> then(fn {_path, dirs} -> dirs end)
+  |> sum()
+
+space_to_free = 30_000_000 - (70_000_000 - input[["/"]])
+
+input = Enum.map(input, fn {_k, v} -> v end)
+```
+
+## Part 1
+
+```elixir
+input
+|> Enum.filter(&(&1 <= 100_000))
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+input
+|> Enum.filter(&(&1 >= space_to_free))
+|> Enum.min()
+```
