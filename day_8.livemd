@@ -1,0 +1,137 @@
+# Day 7
+
+```elixir
+Mix.install([:kino])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please enter your data here")
+```
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn line ->
+    String.codepoints(line)
+    |> Enum.map(&String.to_integer/1)
+  end)
+
+dim = length(input)
+dim_range = 0..(dim - 1)
+
+tree_map =
+  dim_range
+  |> Enum.reduce(%{}, fn row_number, tm ->
+    row = Enum.at(input, row_number)
+
+    row_map =
+      dim_range
+      |> Enum.reduce(%{}, fn column_number, rm ->
+        column_value = Enum.at(row, column_number)
+        Map.put(rm, column_number, column_value)
+      end)
+
+    Map.put(tm, row_number, row_map)
+  end)
+```
+
+```elixir
+defmodule Day8 do
+  def find_trees(path, visible_trees, tree_map),
+    do: find_trees(path, -1, visible_trees, tree_map)
+
+  def find_trees([{r, c} | tl], max, visible_trees, tree_map) do
+    value = tree_map[r][c]
+
+    if value > max do
+      find_trees(tl, value, [{r, c} | visible_trees], tree_map)
+    else
+      find_trees(tl, max, visible_trees, tree_map)
+    end
+  end
+
+  def find_trees([], _max, visible_trees, _tree_map), do: visible_trees
+
+  def create_paths_row(row_range, column_range) do
+    for row <- row_range do
+      for column <- column_range do
+        {row, column}
+      end
+    end
+  end
+
+  def create_paths_column(row_range, column_range) do
+    for column <- column_range do
+      for row <- row_range do
+        {row, column}
+      end
+    end
+  end
+
+  def scenic_score({r, c} = tree, tree_map) do
+    tree_height = tree_map[r][c]
+
+    [:top, :right, :bottom, :left]
+    |> Enum.map(&scenic_score_dir(&1, tree, tree_height, tree_map))
+    |> Enum.reduce(&(&1 * &2))
+  end
+
+  def scenic_score_dir(direction, {r, c} = _tree, tree_height, tree_map) do
+    {r, c} =
+      next_tree =
+      case direction do
+        :top -> {r + 1, c}
+        :right -> {r, c + 1}
+        :bottom -> {r - 1, c}
+        :left -> {r, c - 1}
+      end
+
+    height = tree_map[r][c]
+
+    cond do
+      height == nil ->
+        0
+
+      height < tree_height ->
+        1 + scenic_score_dir(direction, next_tree, tree_height, tree_map)
+
+      true ->
+        1
+    end
+  end
+end
+```
+
+## Part 1
+
+```elixir
+import Day8
+
+boundary = dim - 1
+normal = 0..boundary
+reverse = boundary..0
+
+paths =
+  create_paths_row(normal, normal) ++
+    create_paths_row(normal, reverse) ++
+    create_paths_column(normal, normal) ++
+    create_paths_column(reverse, normal)
+
+paths
+|> Enum.reduce([], &find_trees(&1, &2, tree_map))
+|> Enum.uniq()
+|> Enum.count()
+```
+
+## Part 2
+
+```elixir
+create_paths_row(normal, normal)
+|> List.flatten()
+|> Enum.map(&scenic_score(&1, tree_map))
+|> Enum.max()
+```
