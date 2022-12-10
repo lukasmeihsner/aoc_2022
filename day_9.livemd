@@ -1,0 +1,92 @@
+# Day 9
+
+```elixir
+Mix.install([:kino])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please enter your data here")
+```
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn command ->
+    [d, v] = String.split(command, " ")
+    {d, String.to_integer(v)}
+  end)
+```
+
+## Part 1
+
+```elixir
+defmodule Day9 do
+  def track_tail(commands, tail_size) do
+    tail = Enum.reduce(1..tail_size, [], fn _, l -> [{0, 0} | l] end)
+    track_tail(commands, {0, 0}, tail, [])
+  end
+
+  def track_tail([{_, 0} | tl], head, tail, tail_pos) do
+    track_tail(tl, head, tail, tail_pos)
+  end
+
+  def track_tail([{command, amount} | tl], head, tail, tail_pos) do
+    new_head = move_head(head, command)
+
+    {_, new_tail} =
+      tail
+      |> Enum.reduce({new_head, []}, fn knot, {new_head, new_tail} ->
+        new_knot = move_tail(new_head, knot)
+        {new_knot, new_tail ++ [new_knot]}
+      end)
+
+    tail_pos = [Enum.fetch!(new_tail, length(tail) - 1) | tail_pos]
+    track_tail([{command, amount - 1} | tl], new_head, new_tail, tail_pos)
+  end
+
+  def track_tail([], _head, _tail, tail_pos) do
+    tail_pos
+  end
+
+  defp move_head({hx, hy}, "U"), do: {hx, hy + 1}
+  defp move_head({hx, hy}, "R"), do: {hx + 1, hy}
+  defp move_head({hx, hy}, "D"), do: {hx, hy - 1}
+  defp move_head({hx, hy}, "L"), do: {hx - 1, hy}
+
+  defp move_tail({hx, hy}, {tx, ty}) when abs(hx - tx) <= 1 and abs(hy - ty) <= 1, do: {tx, ty}
+  defp move_tail({tx, hy}, {tx, ty}) when hy - ty > 0, do: {tx, ty + 1}
+  defp move_tail({tx, hy}, {tx, ty}) when hy - ty < 0, do: {tx, ty - 1}
+  defp move_tail({hx, ty}, {tx, ty}) when hx - tx > 0, do: {tx + 1, ty}
+  defp move_tail({hx, ty}, {tx, ty}) when hx - tx < 0, do: {tx - 1, ty}
+
+  defp move_tail({hx, hy}, {tx, ty}) do
+    dx = if hx - tx > 0, do: 1, else: -1
+    dy = if hy - ty > 0, do: 1, else: -1
+    {tx + dx, ty + dy}
+  end
+end
+```
+
+```elixir
+import Day9
+
+input
+|> track_tail(1)
+|> Enum.uniq()
+|> Enum.count()
+```
+
+## Part 2
+
+```elixir
+import Day9
+
+input
+|> track_tail(9)
+|> Enum.uniq()
+|> Enum.count()
+```
