@@ -1,0 +1,71 @@
+# Day 10
+
+```elixir
+Mix.install([:kino])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("Please enter your data here")
+```
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split(["\n", " "], trim: true)
+```
+
+## Part 1
+
+```elixir
+cycle_sample = [20, 60, 100, 140, 180, 220]
+
+input
+|> Enum.reduce([{1, 1}], fn command, [{cycle, x} | _tl] = list ->
+  tick =
+    case command do
+      "noop" -> {cycle + 1, x}
+      "addx" -> {cycle + 1, x}
+      number -> {cycle + 1, x + String.to_integer(number)}
+    end
+
+  [tick | list]
+end)
+|> Enum.filter(&Enum.member?(cycle_sample, elem(&1, 0)))
+|> Enum.map(fn {c, x} -> c * x end)
+|> Enum.sum()
+|> dbg
+```
+
+## Part 2
+
+```elixir
+width = 40
+
+input
+|> Enum.reduce([{1, 1}], fn command, [{cycle, x} | _tl] = list ->
+  tick =
+    case command do
+      "noop" -> {cycle + 1, x}
+      "addx" -> {cycle + 1, x}
+      number -> {cycle + 1, x + String.to_integer(number)}
+    end
+
+  [tick | list]
+end)
+|> Enum.reverse()
+|> Enum.reduce([], fn {c, x}, l ->
+  cond do
+    rem(c, 40) in x..(x + 2) -> ["#" | l]
+    true -> ["." | l]
+  end
+end)
+|> Enum.reverse()
+|> Enum.chunk_every(width, width, :discard)
+|> Enum.map(&Enum.join(&1))
+|> Enum.each(&IO.puts(&1))
+```
+
+BGKAEREZ
