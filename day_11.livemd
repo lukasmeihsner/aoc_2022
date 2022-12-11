@@ -1,0 +1,155 @@
+# Day 10
+
+```elixir
+Mix.install([:kino])
+```
+
+## Input
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input = Kino.Input.textarea("Please enter your data here")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input = Kino.Input.read(input)
+```
+
+```elixir
+defmodule Monkey do
+  defstruct([:number, :items, :operation, :next, inspections: 0])
+
+  def parse_input(input) do
+    input
+    |> String.split("\n\n", trim: true)
+    |> Enum.map(&String.split(&1, "\n", trim: true))
+    |> Enum.map(fn lines -> Enum.map(lines, &String.trim/1) end)
+    |> Enum.map(&parse_monkey/1)
+  end
+
+  defp parse_monkey([
+         "Monkey " <> monkey_number,
+         "Starting items: " <> items,
+         "Operation: new = old " <> <<op, _, worry_factor::binary>>,
+         "Test: divisible by " <> test_factor,
+         "If true: throw to monkey " <> monkey_when_true,
+         "If false: throw to monkey " <> monkey_when_false
+       ]) do
+    %Monkey{
+      number:
+        monkey_number
+        |> String.replace(":", "")
+        |> String.to_integer(),
+      items:
+        items
+        |> String.split(", ")
+        |> Enum.map(&String.to_integer/1),
+      operation: {op, worry_factor},
+      next: {
+        String.to_integer(test_factor),
+        String.to_integer(monkey_when_true),
+        String.to_integer(monkey_when_false)
+      }
+    }
+  end
+
+  def play(monkeys, number_of_rounds, part) do
+    common_divisor =
+      if part == 1 do
+        nil
+      else
+        monkeys
+        |> Enum.map(&elem(&1.next, 0))
+        |> Enum.product()
+      end
+
+    1..number_of_rounds
+    |> Enum.reduce(monkeys, fn _r, m -> play_round(m, common_divisor) end)
+  end
+
+  defp play_round(monkeys, div) do
+    turns =
+      0..(length(monkeys) - 1)
+      |> Enum.map(& &1)
+
+    play_round(turns, monkeys, div)
+  end
+
+  defp play_round([number | tl], monkeys, div) do
+    monkeys =
+      monkeys
+      |> Enum.at(number)
+      |> turn(monkeys, div)
+
+    play_round(tl, monkeys, div)
+  end
+
+  defp play_round([], monkeys, _div), do: monkeys
+
+  defp turn(%Monkey{items: [item | tl]} = monkey, monkeys, div) do
+    monkeys =
+      item
+      |> inspects(monkey.operation)
+      |> manage_worry(div)
+      |> throws_to_next(monkey.next, monkeys)
+      |> List.update_at(monkey.number, fn monkey ->
+        inspections = monkey.inspections + 1
+        %{monkey | items: tl, inspections: inspections}
+      end)
+
+    turn(Enum.at(monkeys, monkey.number), monkeys, div)
+  end
+
+  defp turn(%Monkey{items: []}, monkeys, _div), do: monkeys
+
+  defp inspects(item, {?*, "old"}), do: item * item
+  defp inspects(item, {?+, "old"}), do: item + item
+  defp inspects(item, {?*, wf}), do: item * String.to_integer(wf)
+  defp inspects(item, {?+, wf}), do: item + String.to_integer(wf)
+
+  defp manage_worry(item, nil), do: floor(item / 3)
+  defp manage_worry(item, divisor), do: rem(item, divisor)
+
+  defp throws_to_next(item, {factor, m1, m2}, monkeys) do
+    next = if rem(item, factor) == 0, do: m1, else: m2
+
+    List.update_at(monkeys, next, fn monkey ->
+      new_items = [item | monkey.items]
+      %{monkey | items: new_items}
+    end)
+  end
+end
+```
+
+## Part 1
+
+```elixir
+import Monkey
+
+input
+|> parse_input()
+|> play(20, 1)
+|> Enum.map(& &1.inspections)
+|> Enum.sort(:desc)
+|> Enum.take(2)
+|> then(fn [i1, i2] -> i1 * i2 end)
+```
+
+## Part 2
+
+```elixir
+import Monkey
+
+start =
+  input
+  |> parse_input()
+  |> play(10000, 2)
+  |> Enum.map(& &1.inspections)
+  |> IO.inspect(charlists: :as_lists)
+  |> Enum.sort(:desc)
+  |> Enum.take(2)
+  |> then(fn [i1, i2] -> i1 * i2 end)
+```
