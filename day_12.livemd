@@ -1,0 +1,144 @@
+# Day 12
+
+```elixir
+Mix.install([:kino])
+```
+
+## Section
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input = Kino.Input.textarea("Put your data here")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.map(&String.to_charlist/1)
+  |> Enum.reduce({%{}, 0}, fn row, {map, row_num} ->
+    {map, _} =
+      Enum.reduce(row, {map, 0}, fn value, {map, col_num} ->
+        {Map.put(map, {row_num, col_num}, value), col_num + 1}
+      end)
+
+    {map, row_num + 1}
+  end)
+  |> then(&elem(&1, 0))
+```
+
+```elixir
+defmodule Graph do
+  defstruct [:start, :target, nodes: [], edges: %{}]
+
+  def create_graph(input) do
+    input
+    |> Enum.reduce(%Graph{}, fn entry, graph ->
+      graph
+      |> add_node(entry, input)
+    end)
+  end
+
+  def add_node(%Graph{edges: edges, nodes: nodes} = graph, {{x, y} = node, value}, input) do
+    start = if value == ?S, do: node, else: graph.start
+    target = if value == ?E, do: node, else: graph.target
+
+    value = map_value(value)
+
+    nodes = [node | nodes]
+
+    new_edges =
+      [{x, y + 1}, {x + 1, y}, {x, y - 1}, {x - 1, y}]
+      |> Enum.map(&{&1, map_value(Map.get(input, &1))})
+      |> Enum.filter(fn {_n, v} -> v != nil && (v - value) in 0..1 end)
+      |> Enum.reduce(edges, fn {n, _v}, acc ->
+        Map.update(acc, node, [n], fn list -> [n | list] end)
+      end)
+      |> dbg()
+
+    %{graph | nodes: nodes, edges: new_edges, target: target, start: start}
+  end
+
+  defp map_value(?S), do: ?a
+  defp map_value(?E), do: ?z
+  defp map_value(v), do: v
+
+  def find_path(%Graph{nodes: nodes, edges: edges, start: start, target: target}) do
+    init_nodes =
+      nodes
+      |> Enum.reduce(%{}, &Map.put(&2, &1, nil))
+      |> Map.put(start, 0)
+
+    find_path(init_nodes, edges, %{}, start, target)
+  end
+
+  def find_path(_nodes, _edges, visited, node, target) when node == target do
+    visited
+  end
+
+  def find_path(nodes, edges, visited, node, target) do
+    current_node_value = Map.get(nodes, node)
+    visited = Map.put(visited, node, current_node_value)
+    nodes = Map.delete(nodes, node)
+
+    if elem(node, 0) == 20 do
+      IO.inspect(node)
+    end
+
+    nodes =
+      edges
+      |> Map.get(node, [])
+      |> Enum.filter(&(!Map.has_key?(visited, &1)))
+      |> Enum.reduce(
+        nodes,
+        &Map.update(&2, &1, current_node_value + 1, fn value ->
+          min(value, current_node_value + 1)
+        end)
+      )
+
+    {next_node, _v} = Enum.min(nodes, fn {_k1, v1}, {_k2, v2} -> v1 <= v2 end)
+    find_path(nodes, edges, visited, next_node, target)
+    # %{nodes: nodes, v: visited, n: next_node}
+  end
+end
+
+# Maybe rewrite to only walk the necessary edges
+```
+
+```elixir
+import Graph
+
+nodes = %{{1, 1} => 1, {3, 4} => nil}
+edges = %{{1, 1} => [{1, 2}, {2, 1}, {3, 4}]}
+visited = %{{2, 1} => 2, {1, 2} => 0}
+node = {1, 1}
+
+find_path(nodes, edges, visited, node, {0, 0})
+```
+
+## Part 1
+
+```elixir
+import Graph
+
+graph =
+  input
+  |> create_graph
+
+# |> find_path
+# |> Enum.uniq_by(fn {_k,v} ->  v end)
+
+Map.get(graph.edges, {20, 121})
+```
+
+```elixir
+import Graph
+
+add_node(%Graph{}, {{20, 114}, ?t}, input)
+
+# Map.get(input,{20,114})
+```
