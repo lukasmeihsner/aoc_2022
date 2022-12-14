@@ -1,0 +1,158 @@
+# Day 13
+
+```elixir
+Mix.install([:kino])
+```
+
+## Section
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input = Kino.Input.textarea("Put your data here")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> Enum.map(&String.split(&1, " -> "))
+  |> Enum.map(fn line ->
+    line
+    |> Enum.map(fn point ->
+      [x, y] = String.split(point, ",")
+      {String.to_integer(x), String.to_integer(y)}
+    end)
+    |> Enum.chunk_every(2, 1, :discard)
+  end)
+  |> Enum.reduce([], fn list, acc ->
+    Enum.reduce(acc, list, fn item, acc -> [item | acc] end)
+  end)
+
+input =
+  for [{x1, y1}, {x2, y2}] <- input do
+    for x <- x2..x1, y <- y1..y2 do
+      {x, 500 - y}
+    end
+  end
+  |> List.flatten()
+  |> Enum.reduce(%{}, fn key, map -> Map.put(map, key, nil) end)
+```
+
+## Sorting
+
+```elixir
+defmodule Day14.Part1 do
+  def sand_sim(blocks) do
+    abyss =
+      blocks
+      |> Enum.map(fn {{_x, y}, _v} -> y end)
+      |> Enum.min()
+
+    sand_sim(blocks, 0, abyss, {500, 500})
+  end
+
+  defp sand_sim(_blocks, no, abyss, {_x, y}) when y == abyss, do: no
+
+  defp sand_sim(blocks, no, abyss, {x, y} = sand) do
+    case in_block?(blocks, {x, y - 1}) do
+      false ->
+        sand_sim(blocks, no, abyss, {x, y - 1})
+
+      _ ->
+        case in_block?(blocks, {x - 1, y - 1}) do
+          false ->
+            sand_sim(blocks, no, abyss, {x - 1, y})
+
+          _ ->
+            case in_block?(blocks, {x + 1, y - 1}) do
+              false -> sand_sim(blocks, no, abyss, {x + 1, y})
+              _ -> sand_sim(Map.put(blocks, sand, nil), no + 1, abyss, {500, 500})
+            end
+        end
+    end
+  end
+
+  defp in_block?(blocks, key) do
+    Map.has_key?(blocks, key)
+  end
+end
+```
+
+## Part 1
+
+```elixir
+Day14.Part1.sand_sim(input)
+```
+
+## Part 2
+
+```elixir
+defmodule Day14.Part2 do
+  def sand_sim(blocks) do
+    abyss =
+      blocks
+      |> Enum.map(fn {{_x, y}, _v} -> y end)
+      |> Enum.min()
+
+    floor = abyss - 2
+    IO.inspect(floor)
+    sand_sim(blocks, 0, floor, {500, 500})
+  end
+
+  defp sand_sim(blocks, no, floor, {x, y} = sand) do
+    case is_blocked?(blocks, {x, y - 1}, floor) do
+      false ->
+        sand_sim(blocks, no, floor, {x, y - 1})
+
+      _ ->
+        case is_blocked?(blocks, {x - 1, y - 1}, floor) do
+          false ->
+            sand_sim(blocks, no, floor, {x - 1, y})
+
+          _ ->
+            case is_blocked?(blocks, {x + 1, y - 1}, floor) do
+              false ->
+                sand_sim(blocks, no, floor, {x + 1, y})
+
+              _ ->
+                case {x, y} do
+                  {500, 500} -> no + 1
+                  _ -> sand_sim(add_to_blocks(blocks, sand), no + 1, floor, {500, 500})
+                end
+            end
+        end
+    end
+  end
+
+  defp add_to_blocks(blocks, {x, y} = sand) do
+    [{x, y + 1}, {x + 1, y}, {x, y - 1}, {x - 1, y}]
+    |> Enum.reduce(blocks, &check_delete(&2, &1))
+    |> Map.put(sand, nil)
+  end
+
+  defp check_delete(blocks, {x, y}) do
+    with true <- Map.has_key?(blocks, {x, y + 1}),
+         true <- Map.has_key?(blocks, {x + 1, y}),
+         true <- Map.has_key?(blocks, {x, y - 1}),
+         true <- Map.has_key?(blocks, {x - 1, y}) do
+      Map.delete(blocks, {x, y})
+    else
+      false -> blocks
+    end
+  end
+
+  defp is_blocked?(_blocks, {_x, y}, floor) when floor == y, do: true
+
+  defp is_blocked?(blocks, key, _floor) do
+    Map.has_key?(blocks, key)
+  end
+end
+```
+
+```elixir
+Day14.Part2.sand_sim(input)
+```
