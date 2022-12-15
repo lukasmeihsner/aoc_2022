@@ -1,0 +1,108 @@
+# Day 13
+
+```elixir
+Mix.install([:kino])
+```
+
+## Section
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input = Kino.Input.textarea("Put your data here")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> Enum.map(fn line ->
+    [_, sx, sy, bx, by] =
+      ~r/Sensor at x=(-?\d+), y=(-?\d+): closest beacon is at x=(-?\d+), y=(-?\d+)/
+      |> Regex.run(line)
+
+    {
+      {
+        String.to_integer(sx),
+        String.to_integer(sy)
+      },
+      {
+        String.to_integer(bx),
+        String.to_integer(by)
+      }
+    }
+  end)
+```
+
+```elixir
+defmodule Day15 do
+  def add_distances(input) do
+    Enum.map(input, &add_distance(&1))
+  end
+
+  def pos_with_no_beacon(input, y) do
+    {s, e} = get_x_boundary(input)
+    beacons = Enum.map(input, fn {_s, b, _d} -> b end)
+
+    for x <- s..e, no_beacon_present?(input, {x, y}), !is_beacon?(beacons, {x, y}) do
+      {x, y}
+    end
+  end
+
+  def pos_with_no_beacon(input, x, y) do
+    beacons = Enum.map(input, fn {_s, b, _d} -> b end)
+
+    for x <- 0..x, y <- 0..y, no_beacon_present?(input, {x, y}), !is_beacon?(beacons, {x, y}) do
+      {x, y}
+    end
+  end
+
+  defp is_beacon?(beacons, point) do
+    Enum.any?(beacons, &(&1 == point))
+  end
+
+  defp no_beacon_present?([], _point), do: false
+
+  defp no_beacon_present?([{s, _b, d} | tl], point) do
+    manhattan_distance(s, point) <= d || no_beacon_present?(tl, point)
+  end
+
+  defp add_distance({s, b}) do
+    {s, b, manhattan_distance(s, b)}
+  end
+
+  defp manhattan_distance({x1, y1}, {x2, y2}) do
+    abs(x1 - x2) + abs(y1 - y2)
+  end
+
+  defp get_x_boundary([{{start, _}, _, _} | input]) do
+    Enum.reduce(input, {start, start}, fn {{x, _}, _, d}, {s, e} ->
+      {min(s, x - d), max(e, x + d)}
+    end)
+  end
+end
+```
+
+## Part 1
+
+```elixir
+input
+|> Day15.add_distances()
+|> Day15.pos_with_no_beacon(2_000_000)
+|> Enum.count()
+```
+
+## Part 2
+
+```elixir
+d = 4_000_000
+{x, y} = {d, d}
+
+input
+|> Day15.add_distances()
+|> Day15.pos_with_no_beacon(x, y)
+|> Enum.count()
+```
