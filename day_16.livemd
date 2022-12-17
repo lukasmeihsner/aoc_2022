@@ -1,0 +1,96 @@
+# Day 16
+
+```elixir
+Mix.install([:kino])
+```
+
+## Section
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input = Kino.Input.textarea("Put your data here")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> Enum.map(fn line ->
+    [_, valve, rate, to] =
+      ~r/Valve ([A-Z]{2}) has flow rate=(\d*); (?:tunnels|tunnel) (?:lead|leads) to (?:valves|valve) (.*)/
+      |> Regex.run(line)
+
+    {valve, String.to_integer(rate), String.split(to, ", ")}
+  end)
+  |> Enum.reduce(%{}, fn {valve, rate, to}, map -> Map.put(map, valve, {rate, to}) end)
+```
+
+```elixir
+defmodule Day16 do
+  def create(_valves, states, minute) when minute == 30 do
+    states
+  end
+
+  def create(valves, states, minute) do
+    create(valves, states, [], minute)
+  end
+
+  def create(valves, [{valve, open, cur_rate, acc_rate} | tl], new_states, minute) do
+    {rate, to} = Map.get(valves, valve)
+    is_open = Map.has_key?(open, valve)
+
+    updated_states =
+      Enum.reduce(to, [], fn to, list ->
+        [{to, open, cur_rate, acc_rate + cur_rate} | list]
+      end)
+
+    updated_states =
+      if is_open do
+        updated_states
+      else
+        [
+          {valve, Map.put(open, valve, nil), cur_rate + rate, acc_rate + cur_rate}
+          | updated_states
+        ]
+      end
+
+    create(valves, tl, updated_states ++ new_states, minute)
+  end
+
+  def create(valves, [], new_states, minute) do
+    # We take the fittest
+    new_states =
+      new_states
+      |> Enum.sort(fn {_, _, _, p1}, {_, _, _, p2} -> p1 > p2 end)
+      |> Enum.take(1000)
+
+    create(valves, new_states, minute + 1)
+  end
+end
+```
+
+## Part 1
+
+```elixir
+init_state = [{"AA", %{}, 0, 0}]
+
+Day16.create(input, init_state, 0)
+|> Enum.max(fn {_, _, _, p1}, {_, _, _, p2} -> p1 > p2 end)
+```
+
+## Part 2
+
+```elixir
+dim = 4_000_000
+
+{x, y} =
+  input
+  |> Day15.add_distances()
+  |> Day15.find_beacon({0, 0}, dim)
+
+x * dim + y
+```

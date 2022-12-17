@@ -1,4 +1,4 @@
-# Day 13
+# Day 15
 
 ```elixir
 Mix.install([:kino])
@@ -52,11 +52,21 @@ defmodule Day15 do
     end
   end
 
-  def pos_with_no_beacon(input, x, y) do
-    beacons = Enum.map(input, fn {_s, b, _d} -> b end)
+  def find_beacon(input, {x, y} = point, max) do
+    next =
+      input
+      |> Enum.map(fn {s, _b, d} -> d - manhattan_distance(s, point) end)
+      |> Enum.max()
+      |> dbg
 
-    for x <- 0..x, y <- 0..y, no_beacon_present?(input, {x, y}), !is_beacon?(beacons, {x, y}) do
-      {x, y}
+    next = next + 1
+
+    cond do
+      x > max -> point
+      y > max -> point
+      next < 1 -> point
+      x + next > max -> find_beacon(input, {0, y + 1}, max)
+      true -> find_beacon(input, {x + next, y}, max)
     end
   end
 
@@ -98,11 +108,12 @@ input
 ## Part 2
 
 ```elixir
-d = 4_000_000
-{x, y} = {d, d}
+dim = 4_000_000
 
-input
-|> Day15.add_distances()
-|> Day15.pos_with_no_beacon(x, y)
-|> Enum.count()
+{x, y} =
+  input
+  |> Day15.add_distances()
+  |> Day15.find_beacon({0, 0}, dim)
+
+x * dim + y
 ```
