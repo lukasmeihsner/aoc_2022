@@ -4,7 +4,7 @@
 Mix.install([:kino])
 ```
 
-## Section
+## Prep
 
 <!-- livebook:{"reevaluate_automatically":true} -->
 
@@ -35,22 +35,24 @@ input =
 defmodule Day12 do
   require Logger
 
-  def find_path(_map, {pos, {_, wc}}, end_pos, visited) when pos == end_pos do
-    _visited = Map.put(visited, end_pos, wc)
-    # get_path(visited, end_pos, wc + 1)
+  def find_path(_map, {pos, {_, wc}}, {:position, end_cond}, visited) when pos == end_cond do
+    _visited = Map.put(visited, end_cond, wc)
   end
 
-  def find_path(_map, {_pos, {_, nil}}, _end_pos, _visited) do
+  def find_path(_map, {pos, {hc, wc}}, {:value, end_cond}, visited) when hc == end_cond do
+    _visited = Map.put(visited, pos, wc)
+  end
+
+  def find_path(_map, {_pos, {_, nil}}, _end_cond, _visited) do
     :no_path_found
   end
 
-  def find_path(map, {k, {_hc, wc}} = current, end_pos, visited) do
+  def find_path(map, {k, {_hc, wc}} = current, end_cond, visited) do
     map =
       map
       |> update_neighbors(current, visited)
       |> Enum.reduce(map, fn {k, v}, acc -> Map.put(acc, k, v) end)
       |> Map.delete(k)
-      |> dbg
 
     next =
       map
@@ -58,7 +60,7 @@ defmodule Day12 do
 
     visited = Map.put(visited, k, wc)
 
-    find_path(map, next, end_pos, visited)
+    find_path(map, next, end_cond, visited)
   end
 
   def update_neighbors(map, {{x, y}, value}, visited) do
@@ -106,7 +108,25 @@ map =
   |> Map.put(start_pos, start_value)
   |> Map.put(end_pos, {?z, nil})
 
-Day12.find_path(map, {start_pos, start_value}, end_pos, %{})
+Day12.find_path(map, {start_pos, start_value}, {:position, end_pos}, %{})
 # |> Enum.sort(fn {_,v1},{_,v2} -> v1 > v2 end)
 |> Map.get(end_pos)
+```
+
+## Part 2
+
+```elixir
+{start_pos, _} = Enum.find(input, fn {_k, {h, _}} -> h == ?S end)
+{end_pos, _} = Enum.find(input, fn {_k, {h, _}} -> h == ?E end)
+
+map =
+  input
+  |> Map.put(start_pos, {?a, nil})
+  |> Map.put(end_pos, {?z, 0})
+  |> Enum.map(fn {k, {h, w}} -> {k, {?z - h, w}} end)
+  |> Enum.into(%{})
+
+Day12.find_path(map, {end_pos, start_value}, {:value, ?z - ?a}, %{})
+|> Enum.sort(fn {_, v1}, {_, v2} -> v1 > v2 end)
+|> Enum.at(0)
 ```
