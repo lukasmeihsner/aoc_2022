@@ -9,15 +9,29 @@ Mix.install([:kino])
 <!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
-input = Kino.Input.textarea("Put your data here")
+input_text = Kino.Input.textarea("Put your data here")
 ```
 
 <!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
+input_text =
+  case Kino.Input.read(input_text) do
+    "" ->
+      """
+      Sabqponm
+      abcryxxl
+      accszExk
+      acctuvwj
+      abdefghi
+      """
+
+    input ->
+      input
+  end
+
 input =
-  input
-  |> Kino.Input.read()
+  input_text
   |> String.split("\n", trim: true)
   |> Enum.map(&String.to_charlist/1)
   |> Enum.reduce({%{}, 0}, fn row, {map, row_num} ->
@@ -32,22 +46,78 @@ input =
 ```
 
 ```elixir
+defmodule Renderer do
+  def render(input, width, height, visited, frame) do
+    images =
+      for x <- 0..(height - 1) do
+        for y <- 0..(width - 1) do
+          case Map.has_key?(visited, {x, y}) do
+            true -> create_svg_visited()
+            _ -> create_svg_unvisited(input, x, y)
+          end
+        end
+      end
+      |> List.flatten()
+
+    grid = Kino.Layout.grid(images, columns: width, gap: 0)
+    Kino.Frame.render(frame, grid)
+    :timer.sleep(100)
+  end
+
+  defp create_svg_unvisited(input, x, y) do
+    interval = 255 / 26
+
+    code =
+      case Map.get(input, {x, y}) do
+        {?S, _} -> 255
+        {?E, _} -> 0
+        {h, _} -> round((?z - h) * interval)
+      end
+
+    """
+    <svg height="100" width="100" xmlns="http://www.w3.org/2000/svg">
+      <rect height="100" width="100" style="fill:rgb(#{code},#{code},#{code})" />
+    </svg>
+    """
+    |> Kino.Image.new(:svg)
+  end
+
+  defp create_svg_visited() do
+    """
+    <svg height="100" width="100" xmlns="http://www.w3.org/2000/svg">
+      <rect height="100" width="100" fill="red" />
+    </svg>
+    """
+    |> Kino.Image.new(:svg)
+  end
+end
+```
+
+```elixir
 defmodule Day12 do
   require Logger
 
-  def find_path(_map, {pos, {_, wc}}, {:position, end_cond}, visited) when pos == end_cond do
+  def find_path(_map, {pos, {_, wc}}, {:position, end_cond}, visited, _render_options)
+      when pos == end_cond do
     _visited = Map.put(visited, end_cond, wc)
   end
 
-  def find_path(_map, {pos, {hc, wc}}, {:value, end_cond}, visited) when hc == end_cond do
+  def find_path(_map, {pos, {hc, wc}}, {:value, end_cond}, visited, _render_options)
+      when hc == end_cond do
     _visited = Map.put(visited, pos, wc)
   end
 
-  def find_path(_map, {_pos, {_, nil}}, _end_cond, _visited) do
+  def find_path(_map, {_pos, {_, nil}}, _end_cond, _visited, _render_options) do
     :no_path_found
   end
 
-  def find_path(map, {k, {_hc, wc}} = current, end_cond, visited) do
+  def find_path(
+        map,
+        {k, {_hc, wc}} = current,
+        end_cond,
+        visited,
+        {frame, width, height} = render_options
+      ) do
     map =
       map
       |> update_neighbors(current, visited)
@@ -60,7 +130,11 @@ defmodule Day12 do
 
     visited = Map.put(visited, k, wc)
 
-    find_path(map, next, end_cond, visited)
+    if render_options do
+      Renderer.render(map, width, height, visited, frame)
+    end
+
+    find_path(map, next, end_cond, visited, render_options)
   end
 
   def update_neighbors(map, {{x, y}, value}, visited) do
@@ -94,10 +168,23 @@ defmodule Day12 do
 end
 ```
 
+```elixir
+split =
+  input_text
+  |> String.split("\n", trim: true)
+
+height = Enum.count(split)
+width = String.length(Enum.at(split, 0))
+
+frame = Kino.Frame.new()
+```
+
 ## Part 1
 
 ```elixir
 import Day12
+
+render_options = {frame, width, height}
 
 {start_pos, _} = Enum.find(input, fn {_k, {h, _}} -> h == ?S end)
 {end_pos, _} = Enum.find(input, fn {_k, {h, _}} -> h == ?E end)
@@ -108,7 +195,7 @@ map =
   |> Map.put(start_pos, start_value)
   |> Map.put(end_pos, {?z, nil})
 
-Day12.find_path(map, {start_pos, start_value}, {:position, end_pos}, %{})
+Day12.find_path(map, {start_pos, start_value}, {:position, end_pos}, %{}, render_options)
 # |> Enum.sort(fn {_,v1},{_,v2} -> v1 > v2 end)
 |> Map.get(end_pos)
 ```
@@ -126,7 +213,15 @@ map =
   |> Enum.map(fn {k, {h, w}} -> {k, {?z - h, w}} end)
   |> Enum.into(%{})
 
-Day12.find_path(map, {end_pos, start_value}, {:value, ?z - ?a}, %{})
+Day12.find_path(map, {end_pos, start_value}, {:value, ?z - ?a}, %{}, render_options)
 |> Enum.sort(fn {_, v1}, {_, v2} -> v1 > v2 end)
 |> Enum.at(0)
+```
+
+```elixir
+frame = Kino.Frame.new()
+```
+
+```elixir
+Kino.Frame.render(frame, 2)
 ```
